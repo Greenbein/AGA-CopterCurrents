@@ -180,6 +180,7 @@ Pre-computed results for **March 4, 2022** are in `results_tables/`.
 | MAE angle (with wind) | 28.1° | 38.7° |
 | MAE \|U\| (no wind) | 0.130 m/s | 1.494 m/s |
 | MAE angle (no wind) | 40.5° | 64.7° |
+| Mean GPU fit time | ~4.3 min (259 s) | ~22 min (1328 s) |
 
 ---
 

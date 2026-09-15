@@ -11,7 +11,7 @@
 
 ## What this project does
 
-This repo extends [CopterCurrents](https://github.com/rubencarrasco/CopterCurrents) (Streßer et al., 2017) with a faster **Adaptive Gradient Ascent (AGA)** optimizer for fitting the wave dispersion relation. AGA is compared against **GPU Grid Search** on drone videos from a February 20, 2022 field campaign, validated against ADCP measurements.
+This repo extends [CopterCurrents](https://github.com/rubencarrasco/CopterCurrents) (Streßer et al., 2017) with a faster **Adaptive Gradient Ascent (AGA)** optimizer for fitting the wave dispersion relation. AGA is compared against **GPU Grid Search** on drone videos from a **March 4, 2022** field campaign, validated against ADCP measurements.
 
 **Pipeline (5 steps):**
 1. Read drone video + camera metadata
@@ -116,7 +116,7 @@ cfg.calibration_file      = fullfile(matlab_root, cfg.calibration_mat_fname);
 
 | File | Resolution | Notes |
 |---|---|---|
-| `Phantom4pro20022022_Caltech_4096x2160.mat` | 4096×2160 | Default for Feb 2022 campaign |
+| `Phantom4pro20022022_Caltech_4096x2160.mat` | 4096×2160 | Default for 4096×2160 campaign videos |
 | `Phantom4_20220227_FOV_manual_4096x2160.mat` | 4096×2160 | FOV manual calibration |
 
 > Always include the `.mat` extension. The file is resolved relative to `Documents/MATLAB/` (see `get_matlab_root.m`).
@@ -147,7 +147,7 @@ MATLAB/                          ← repo root (working directory)
 │       ├── test_scripts/        ← UI_CopterCurrents, evaluation scripts
 │       └── external_libraries/  ← deg2utm, calibration toolbox, extras
 ├── testaaa/                     ← ADCP import / comparison utilities
-├── results_tables/              ← summary CSVs and plots (Feb 20, 2022)
+├── results_tables/              ← summary CSVs and plots (Mar 4, 2022)
 ├── Phantom4pro20022022_*.mat    ← camera calibration files
 ├── deg2utm.m                    ← UTM coordinate helper
 └── license.txt                  ← GPL v3 (CopterCurrents)
@@ -168,18 +168,18 @@ Run from `CopterCurrents-master/CopterCurrents/test_scripts/` after processing v
 | `plot_fit_time_histogram.m` | Fit runtime: AGA vs Grid Search |
 | `plot_angle_differences.m` | Angular error analysis |
 
-Pre-computed results for Feb 20, 2022 are in `results_tables/`.
+Pre-computed results for **March 4, 2022** are in `results_tables/`.
 
 ---
 
-## Key results (Feb 20, 2022 — 13 videos)
+## Key results (Mar 4, 2022 — 29 videos)
 
 | Metric | AGA | Grid Search |
 |---|---|---|
-| MAE \|U\| (with wind) | 0.083 m/s | 0.211 m/s |
-| MAE angle (with wind) | 18.1° | 78.4° |
-| MAE \|U\| (no wind) | 0.044 m/s | 0.201 m/s |
-| Typical GPU fit time | ~2 min | ~7–12 min |
+| MAE \|U\| (with wind) | 0.058 m/s | 1.421 m/s |
+| MAE angle (with wind) | 28.1° | 38.7° |
+| MAE \|U\| (no wind) | 0.130 m/s | 1.494 m/s |
+| MAE angle (no wind) | 40.5° | 64.7° |
 
 ---
 

@@ -1,0 +1,13 @@
+Error summary for 04 03 2022 (without wind)
+==========================================
+           ERROR ANALYSIS (MAE)           
+==========================================
+VELOCITY MAGNITUDE (|U|):
+  ADCP vs Adaptive GA : 0.1299 m/s
+  ADCP vs Grid Search : 1.4944 m/s
+
+CURRENT DIRECTION (Angles):
+  ADCP vs Adaptive GA : 40.47 degrees
+  ADCP vs Grid Search : 64.73 degrees
+==========================================
+Videos compared: 29

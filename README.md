@@ -1,67 +1,187 @@
 # AGA-CopterCurrents
 
-**UAV-Based Surface Current Estimation with Adaptive Gradient Ascent**
+**UAV-based surface current estimation with Adaptive Gradient Ascent**
 
 | | |
 |---|---|
-| **Course** | Engineering Project II (67547), HUJI |
-| **Group** | 120 |
-| **Student** | Lior Grinbein |
-| **Advisor** | Aviv Solodoch |
+| Course | Engineering Project II (67547), HUJI |
+| Group | 120 |
+| Student | Lior Grinbein |
+| Advisor | Aviv Solodoch |
 
-## Overview
+## What this project does
 
-This project extends [CopterCurrents](https://github.com/rubencarrasco/CopterCurrents) (Streßer et al., 2017) with an **Adaptive Gradient Ascent (AGA)** optimizer for fitting the wave dispersion relation, compared against **GPU Grid Search**. Results are validated against ADCP measurements from a February 20, 2022 field campaign.
+This repo extends [CopterCurrents](https://github.com/rubencarrasco/CopterCurrents) (Streßer et al., 2017) with a faster **Adaptive Gradient Ascent (AGA)** optimizer for fitting the wave dispersion relation. AGA is compared against **GPU Grid Search** on drone videos from a February 20, 2022 field campaign, validated against ADCP measurements.
+
+**Pipeline (5 steps):**
+1. Read drone video + camera metadata
+2. Georeference / rectify frames
+3. Build a grid of analysis windows (STCFIT)
+4. Fit current velocity **U = (Ux, Uy)** per window (AGA or Grid Search)
+5. Filter by SNR and export velocity maps / CSV tables
+
+---
 
 ## Requirements
 
-- MATLAB R2020b or newer (Parallel Computing Toolbox recommended)
-- NVIDIA GPU with CUDA support (for GPU Grid Search and AGA)
-- CopterCurrents dependencies (included under `CopterCurrents-master/`)
+| Component | Required? | Notes |
+|---|---|---|
+| **MATLAB** R2020b+ | Yes | Base environment |
+| **Parallel Computing Toolbox** | Recommended | GPU acceleration for fit step |
+| **NVIDIA GPU + CUDA** | Recommended | AGA and Grid Search run on GPU |
+| **MediaInfo CLI** | Yes | Reads drone GPS/altitude from video metadata. [Download](https://mediaarea.net/en/MediaInfo/Download/Windows). Add to system PATH. |
+| **Video codecs** | Yes | MATLAB `VideoReader` must read your `.MP4` (DJI H.264/MPEG-4) |
+| **deg2utm** | Optional | UTM map plotting — included as `deg2utm.m` in repo root |
+| **Camera Calibration Toolbox** | Optional | Only needed to create new calibrations, not to run the pipeline |
 
-## Quick start
+Bundled inside `CopterCurrents-master/CopterCurrents/external_libraries/`: `deg2utm`, Caltech camera calibration helpers, and CopterCurrents extras (`nanmean`, `nansum`).
+
+---
+
+## Setup
+
+Clone the repo, then in MATLAB:
 
 ```matlab
-cd('C:\path\to\this\repo');
-addpath(genpath('CopterCurrents-master/CopterCurrents'));
+% 1. Go to your working folder (repo root)
+cd('C:\Users\User\Documents\MATLAB');   % adjust path if cloned elsewhere
+
+% 2. Add CopterCurrents paths (external libs, ui_private, etc.)
+cd CopterCurrents-master/CopterCurrents
+add_CopterCurrents_matlab_path
+cd ../..   % back to repo root
+
+% 3. Add AGA / GPU Grid Search code (NOT added automatically)
 addpath(genpath('Code_Lior'));
 addpath('Code_Lior/private');
 
-% Interactive UI pipeline
-UI_CopterCurrents
-
-% Or run the default script
-Run_CopterCurrents_script
+% 4. Optional: verify dependencies
+check_external_functions
 ```
 
-Place drone `.MP4` videos locally (not tracked in git). Select a calibration `.mat` in `get_ui_pipeline_config.m` matching your camera resolution.
+> **Note:** `Code_Lior/` must be added manually — `add_CopterCurrents_matlab_path.m` does not include it.
+
+---
+
+## How to run
+
+### Interactive UI (recommended)
+
+```matlab
+cd CopterCurrents-master/CopterCurrents/test_scripts
+UI_CopterCurrents
+```
+
+The UI will prompt you for:
+- **Video file** (`.MP4` — keep locally, not in git)
+- **Algorithm:** Adaptive Gradient Ascent / Grid Search / Simple Gradient Ascent
+- **GPU mode:** Yes (GPU) or No (CPU)
+- **Output folder** (created next to the video as `<video_name>_results/`)
+- **Georeference cache:** reuse or rebuild
+
+Results are saved under `<video_name>_results/<Algorithm>_results/`.
+
+### Script entry point
+
+```matlab
+cd CopterCurrents-master/CopterCurrents/test_scripts
+Run_CopterCurrents_script   % calls UI_CopterCurrents
+```
+
+---
+
+## Configuration
+
+All pipeline constants live in one file:
+
+```
+CopterCurrents-master/CopterCurrents/test_scripts/ui_private/get_ui_pipeline_config.m
+```
+
+Edit this file before running — no recompile needed.
+
+### Changing the calibration file
+
+The calibration `.mat` must match your **video horizontal resolution**. Wrong resolution → georeference error.
+
+1. Place the `.mat` file in the repo root (`Documents/MATLAB/` on Windows).
+2. Open `get_ui_pipeline_config.m` and set:
+
+```matlab
+cfg.calibration_mat_fname = 'Phantom4pro20022022_Caltech_4096x2160.mat';
+cfg.calibration_file      = fullfile(matlab_root, cfg.calibration_mat_fname);
+```
+
+**Available calibrations in this repo:**
+
+| File | Resolution | Notes |
+|---|---|---|
+| `Phantom4pro20022022_Caltech_4096x2160.mat` | 4096×2160 | Default for Feb 2022 campaign |
+| `Phantom4_20220227_FOV_manual_4096x2160.mat` | 4096×2160 | FOV manual calibration |
+
+> Always include the `.mat` extension. The file is resolved relative to `Documents/MATLAB/` (see `get_matlab_root.m`).
+
+### Other common parameters
+
+| Parameter | Meaning | Example |
+|---|---|---|
+| `cfg.time_limits` | Video segment [start, end] in seconds | `[5 35]` |
+| `cfg.sq_size_m` | Analysis window side length [m] | `10` or `40` |
+| `cfg.sq_dist_m` | Window spacing [m] | `sq_size_m / 2` |
+| `cfg.waveLength_limits_m` | Wavelength filter [m] | `[0.125 10]` |
+| `cfg.wavePeriod_limits_sec` | Period filter [s] | `[0.125 2.25]` |
+| `cfg.Ux_limits_FG` / `cfg.Uy_limits_FG` | Velocity search range [m/s] | `[-2.0 2.0]` |
+| `cfg.SNR_density_thr` | SNR density threshold for maps | `0` or `1.5` |
+
+AGA-specific settings (learning rate, sigma, max iterations) are in `Code_Lior/private/GetOptimizationConfig.m`.
+
+---
 
 ## Repository layout
 
-| Path | Description |
-|---|---|
-| `Code_Lior/` | AGA implementation and GPU Grid Search |
-| `CopterCurrents-master/` | Modified CopterCurrents pipeline |
-| `testaaa/` | ADCP comparison utilities |
-| `results_tables/` | Summary CSVs and error reports (Feb 20, 2022) |
-| `Phantom4pro20022022_Caltech_4096x2160.mat` | Example camera calibration |
+```
+MATLAB/                          ← repo root (working directory)
+├── Code_Lior/                   ← AGA, Simple GA, GPU Grid Search
+├── CopterCurrents-master/       ← modified CopterCurrents pipeline
+│   └── CopterCurrents/
+│       ├── test_scripts/        ← UI_CopterCurrents, evaluation scripts
+│       └── external_libraries/  ← deg2utm, calibration toolbox, extras
+├── testaaa/                     ← ADCP import / comparison utilities
+├── results_tables/              ← summary CSVs and plots (Feb 20, 2022)
+├── Phantom4pro20022022_*.mat    ← camera calibration files
+├── deg2utm.m                    ← UTM coordinate helper
+└── license.txt                  ← GPL v3 (CopterCurrents)
+```
+
+**Not in git** (see `.gitignore`): drone videos (`.MP4`), per-video output folders (`*_results/`), georeference caches, third-party folders (`Plotting/`, `TOOLBOX_calib/`).
+
+---
 
 ## Evaluation scripts
 
-Run from `CopterCurrents-master/CopterCurrents/test_scripts/`:
+Run from `CopterCurrents-master/CopterCurrents/test_scripts/` after processing videos:
 
-- `compare_aga_vs_adcp_full.m` — compare AGA vs Grid Search against ADCP
-- `calculate_csv_velocities_statistics.m` — mean velocities from window CSVs
-- `plot_fit_time_histogram.m` — fit runtime comparison
-- `plot_angle_differences.m` — angular error plots
+| Script | Purpose |
+|---|---|
+| `compare_aga_vs_adcp_full.m` | Compare AGA vs Grid Search against ADCP |
+| `calculate_csv_velocities_statistics.m` | Mean velocities from window CSVs |
+| `plot_fit_time_histogram.m` | Fit runtime: AGA vs Grid Search |
+| `plot_angle_differences.m` | Angular error analysis |
 
-## Key results (Feb 20, 2022, 13 videos)
+Pre-computed results for Feb 20, 2022 are in `results_tables/`.
+
+---
+
+## Key results (Feb 20, 2022 — 13 videos)
 
 | Metric | AGA | Grid Search |
 |---|---|---|
 | MAE \|U\| (with wind) | 0.083 m/s | 0.211 m/s |
 | MAE angle (with wind) | 18.1° | 78.4° |
+| MAE \|U\| (no wind) | 0.044 m/s | 0.201 m/s |
 | Typical GPU fit time | ~2 min | ~7–12 min |
+
+---
 
 ## References
 
@@ -70,4 +190,4 @@ Run from `CopterCurrents-master/CopterCurrents/test_scripts/`:
 
 ## License
 
-CopterCurrents components are licensed under GPL v3 (see `license.txt` and `CopterCurrents-master/LICENSE`). Project-specific code in `Code_Lior/` follows the same license unless noted otherwise.
+CopterCurrents components: **GPL v3** (`license.txt`, `CopterCurrents-master/LICENSE`). Project code in `Code_Lior/` follows the same license.

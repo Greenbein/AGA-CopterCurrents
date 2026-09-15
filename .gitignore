@@ -1,0 +1,30 @@
+# MATLAB autosave / backup
+*.asv
+*.m~
+
+# Large media and per-video outputs
+*.MP4
+*.mp4
+*.avi
+*.mov
+*_results/
+georeference_cache/
+metadata_cache/
+
+# Third-party toolboxes (not part of this project)
+Plotting/
+TOOLBOX_calib/
+MediaInfo/
+calib_doc/
+
+# OS / IDE
+Thumbs.db
+Desktop.ini
+.DS_Store
+.vscode/
+.cursor/
+
+# Secrets
+.env
+*.pem
+*.key
